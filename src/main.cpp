@@ -1,21 +1,19 @@
 #include <Adafruit_NeoPixel.h>
 #include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <WiFiManager.h>
 
 #define PIN D4
-#define STRIPSIZE 16
+#define STRIPSIZE 12
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(STRIPSIZE, PIN, NEO_GRB + NEO_KHZ800);
-ESP8266WebServer server(80);
+
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
-const char *ssid = "ssid";
-const char *password = "password";
-uint32_t hour_color = strip.Color(255, 0, 255);
-uint32_t minute_color = strip.Color(0, 255, 255);
+uint32_t hour_color = strip.Color(255, 0, 0);
+uint32_t minute_color = strip.Color(0, 0, 255);
 
 void blink(int speed)
 {
@@ -32,12 +30,8 @@ void setup()
     Serial.begin(9600);
     strip.begin();
     strip.setBrightness(25);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        blink(500);
-        Serial.print(".");
-    }
+    WiFiManager wifiManager;
+    wifiManager.autoConnect("AP-Name", "<password>");
     timeClient.begin();
     timeClient.setTimeOffset(7200);
 }

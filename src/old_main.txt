@@ -1,0 +1,108 @@
+#include <Adafruit_NeoPixel.h>
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+
+#define PIN D4
+#define STRIPSIZE 16
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(STRIPSIZE, PIN, NEO_GRB + NEO_KHZ800);
+ESP8266WebServer server(80);
+
+const char *ssid = "D1Mini";
+const char *password = "12345678";
+int speed = 100;
+uint32_t color = strip.Color(255, 255, 255);
+
+void satisfyPageRequest()
+{
+  WiFiClient client = server.client();
+  if (client)
+  {
+    client.println("HTTP/1.1 200 OK"); //
+    client.println("Content-Type: text/html");
+    client.println("");
+    client.println("<!DOCTYPE HTML>");
+    client.println("<html>");
+    client.print(" CONTROL LED: ");
+    client.println("<br><br>");
+    client.println("<a href=\"/faster\"\"><button>Faster</button></a>");
+    client.println("<a href=\"/slower\"\"><button>Slower</button></a><br />");
+    client.println("<a href=\"/red\"\"><button>Red</button></a><br />");
+    client.println("<a href=\"/green\"\"><button>Green</button></a><br />");
+    client.println("<a href=\"/blue\"\"><button>Blue</button></a><br />");
+    client.println("</html>");
+  }
+}
+
+void faster()
+{
+  speed > 20 ? speed -= 15 : speed = 15;
+  satisfyPageRequest();
+}
+
+void slower()
+{
+  speed < 150 ? speed += 15 : speed = 150;
+  satisfyPageRequest();
+}
+
+void red()
+{
+  color = strip.Color(255, 0, 0);
+  satisfyPageRequest();
+}
+
+void blue()
+{
+  color = strip.Color(0, 0, 255);
+  satisfyPageRequest();
+}
+
+void green()
+{
+  color = strip.Color(0, 255, 0);
+  satisfyPageRequest();
+}
+
+void setup()
+{
+  Serial.begin(9600);
+  delay(1000);
+  strip.begin();
+  strip.setBrightness(25); // Lower brightness and save eyeballs!
+  strip.show();            // Initialize all pixels to 'off'
+  WiFi.softAP(ssid, password);
+  IPAddress myIP = WiFi.softAPIP();
+  Serial.print(myIP);
+  server.on("/", HTTP_GET, satisfyPageRequest);
+  server.on("/faster", HTTP_GET, faster);
+  server.on("/slower", HTTP_GET, slower);
+  server.on("/red", HTTP_GET, red);
+  server.on("/blue", HTTP_GET, blue);
+  server.on("/green", HTTP_GET, green);
+  server.begin();
+}
+
+void animation_loading()
+{
+  for (int i = 0; i < 12; i++)
+  {
+    int led_0 = i;
+    int led_1 = i - 1 < 0 ? i + 11 : i - 1;
+    int led_2 = i - 2 < 0 ? i + 10 : i - 2;
+
+    strip.setPixelColor(led_0, color);
+    strip.setPixelColor(led_1, color);
+    strip.setPixelColor(led_2, color);
+    strip.show();
+    delay(speed);
+    strip.clear();
+  }
+}
+
+void loop()
+{
+  animation_loading();
+  delay(speed / 2);
+  server.handleClient();
+}

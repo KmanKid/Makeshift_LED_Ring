@@ -7,52 +7,89 @@
 #define PIN D4
 #define STRIPSIZE 12
 
+enum COLOR
+{
+    RED,
+    GREEN,
+    BLUE,
+    PURPLE,
+    MINUTE_COLOR
+};
+
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(STRIPSIZE, PIN, NEO_GRB + NEO_KHZ800);
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "pool.ntp.org");
 
-uint32_t hour_color = strip.Color(255, 0, 0);
-uint32_t minute_color = strip.Color(0, 0, 255);
+int global_led_offset = 6;
 
-void blink(int speed)
+int getLed(int led)
 {
-    strip.clear();
-    strip.show();
-    delay(speed / 2);
-    strip.setPixelColor(0, strip.Color(255, 255, 255));
-    strip.show();
-    delay(speed / 2);
+    int offset_led = (led + global_led_offset) - 12 > 0 ? (led + global_led_offset) - 12 : (led + global_led_offset);
+    return offset_led;
+}
+
+int getLedColor(COLOR color, int intesity)
+{
+    switch (color)
+    {
+    case RED:
+        return strip.Color(intesity, 0, 0);
+        break;
+    case GREEN:
+        return strip.Color(0, intesity, 0);
+        break;
+    case BLUE:
+        return strip.Color(0, 0, intesity);
+        break;
+    case PURPLE:
+        return strip.Color(intesity, 0, intesity);
+        break;
+    case MINUTE_COLOR:
+        return strip.Color(0, intesity, 255);
+        break;
+    default:
+        return strip.Color(intesity, intesity, intesity);
+        break;
+    }
 }
 
 void setup()
 {
     Serial.begin(9600);
     strip.begin();
-    strip.setBrightness(25);
+    strip.setBrightness(255);
     WiFiManager wifiManager;
     wifiManager.autoConnect("AP-Name", "<password>");
     timeClient.begin();
     timeClient.setTimeOffset(7200);
 }
 
-void setHourLed(int hour)
+int setHourLed(int hour)
 {
-    int led = hour - 12 > 0 ? hour - 12 : hour;
-    strip.setPixelColor(led, hour_color);
+    int led = getLed(hour - 12 > 0 ? hour - 12 : hour);
+    strip.setPixelColor(led, getLedColor(RED, 255));
+    return led;
 }
 
-void setMinuteLed(int minute)
+int setMinuteLed(int minute)
 {
-    int led = floor(minute / 5);
-    strip.setPixelColor(led, minute_color);
+    int led = getLed(floor(minute / 5));
+    int intensity = ((minute % 5) + 1) * 51;
+    strip.setPixelColor(led, getLedColor(MINUTE_COLOR, intensity));
+    return led;
 }
 
 void setLedToTime(int hour = 0, int minute = 0)
 {
     strip.clear();
-    setMinuteLed(minute);
-    setHourLed(hour);
+    int minute_led = setMinuteLed(minute);
+    int hour_led = setHourLed(hour);
+    if (hour_led == minute_led)
+    {
+        strip.clear();
+        strip.setPixelColor(hour_led, getLedColor(PURPLE, 255));
+    }
     strip.show();
 }
 
